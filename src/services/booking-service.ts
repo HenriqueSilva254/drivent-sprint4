@@ -7,6 +7,7 @@ import {
   getRoom,
   postBooking,
   putBooking,
+  ticketsRepository,
 } from '@/repositories';
 
 export async function findBooking(userId: number) {
@@ -23,6 +24,15 @@ export async function findBooking(userId: number) {
 }
 
 export async function makeBooking(userId: number, roomId: number) {
+  const enrollment = await enrollmentRepository.findWithAddressByUserId(userId);
+  if (!enrollment) throw notFoundError();
+
+  const checkTickety = await ticketsRepository.findTicketByEnrollmentId(enrollment.id);
+  if (!checkTickety) throw notFoundError();
+  if (checkTickety.TicketType.isRemote === true) throw ForbiddenError('ticket is remote');
+  if (checkTickety.TicketType.includesHotel === false) throw ForbiddenError('hotel no include');
+  if (checkTickety.status !== 'PAID') throw ForbiddenError('need paid ticket');
+
   const checkConflit = await getBooking(userId);
   if (checkConflit) throw conflictError('booking already exists');
 
@@ -30,16 +40,19 @@ export async function makeBooking(userId: number, roomId: number) {
   if (!checkRoom) throw notFoundError();
 
   const checkCapacity = await getBookingByRoomId(roomId);
-  if (checkRoom.capacity <= checkCapacity.length) throw ForbiddenError();
+  console.log(checkCapacity.length);
+  console.log(checkRoom.capacity);
+  if (checkCapacity.length >= checkRoom.capacity)
+    throw ForbiddenError('the capacity limit for this room has been reached');
 
   return await postBooking(userId, roomId);
 }
 
-export async function changeBooking(userId: number, roomId: number, bookingId: string) {
+export async function changeBooking(userId: number, roomId: number, bookingId: number) {
   const enrollment = await enrollmentRepository.findWithAddressByUserId(userId);
   if (!enrollment) throw notFoundError();
 
-  const checkBooking = await getBookingId(parseInt(bookingId));
+  const checkBooking = await getBookingId(bookingId);
   if (!checkBooking) throw conflictError('booking does note exists');
   if (checkBooking.Room.id === roomId) throw conflictError('room has already been reserved by the user');
 
@@ -47,7 +60,8 @@ export async function changeBooking(userId: number, roomId: number, bookingId: s
   if (!checkRoom) throw notFoundError();
 
   const checkCapacity = await getBookingByRoomId(roomId);
-  if (checkRoom.capacity <= checkCapacity.length) throw ForbiddenError();
+  if (checkRoom.capacity <= checkCapacity.length)
+    throw ForbiddenError('the capacity limit for this room has been reached');
 
   return await putBooking(userId, roomId);
 }

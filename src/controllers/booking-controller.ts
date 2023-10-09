@@ -22,6 +22,6 @@ export async function putBooking(req: AuthenticatedRequest, res: Response) {
   const { roomId } = req.body;
   const { bookingId } = req.params;
   console.log(userId);
-  const result = await changeBooking(userId, parseInt(roomId), bookingId);
+  const result = await changeBooking(userId, parseInt(roomId), parseInt(bookingId));
   res.send(result).status(httpStatus.OK);
 }

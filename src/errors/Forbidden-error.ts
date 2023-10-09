@@ -1,8 +1,8 @@
 import { ApplicationError } from '@/protocols';
 
-export function ForbiddenError(): ApplicationError {
+export function ForbiddenError(message: string): ApplicationError {
   return {
     name: 'ForbiddenError',
-    message: `the capacity limit for this room has been reached`,
+    message: message,
   };
 }
